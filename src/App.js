@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react"
+import { Fragment, useRef, useState, useEffect } from "react"
 import { Popover, Transition } from "@headlessui/react"
 import { ChevronDownIcon } from "@heroicons/react/solid"
 
@@ -34,8 +34,8 @@ export default function FlyoutMenu({
     // OR
     // if the modal is currently open, we need to close it
     if (
-      (!open && action === "onMouseEnter") ||
-      (open && action === "onMouseLeave")
+      (!open && !openState && action === "onMouseEnter") ||
+      (open && openState && action === "onMouseLeave")
     ) {
       // clear the old timeout, if any
       clearTimeout(timeout)
@@ -45,43 +45,68 @@ export default function FlyoutMenu({
     // else: don't click! 😁
   }
 
-  const LINK_STYLES =
-    "py-5 px-1 w-64 text-base text-gray-900 uppercase transition duration-500 ease-in-out hover:text-blue-800 hover:bg-blue-100 font-bold"
+  const handleClick = (open) => {
+    setOpenState(!open) // toggle open state in React state
+    clearTimeout(timeout) // stop the hover timer if it's running
+  }
 
+  const LINK_STYLES = classNames(
+    "py-5 px-1 w-48",
+    "text-base text-gray-900 uppercase font-bold",
+    "transition duration-500 ease-in-out",
+    "bg-gray-100 hover:text-blue-700 hover:bg-blue-100"
+  )
+  const handleClickOutside = (event) => {
+    if (buttonRef.current && !buttonRef.current.contains(event.target)) {
+      event.stopPropagation()
+    }
+  }
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  })
   return (
-    <>
-      <Popover className="relative mx-auto mt-1 w-64">
+    <div
+      className={classNames(
+        "w-full h-full absolute inset-0 pt-8",
+        "bg-gradient-to-r md:bg-gradient-to-l",
+        "from-yellow-400 via-red-500 to-pink-500"
+      )}
+    >
+      <Popover className="relative mx-auto w-48">
         {({ open }) => (
           <div
             onMouseEnter={() => onHover(open, "onMouseEnter")}
             onMouseLeave={() => onHover(open, "onMouseLeave")}
+            className="flex flex-col"
           >
-            <div className="mx-auto">
-              <Popover.Button ref={buttonRef}>
-                <div
-                  className={classNames(
-                    open ? "text-blue-800" : "text-gray-800",
-                    "bg-white rounded-md items-center mx-auto border-2 border-black border-solid flex justify-center",
-                    LINK_STYLES
-                  )}
-                  onClick={() => {
-                    setOpenState(!open) // toggle open state in React state
-                    clearTimeout(timeout) // stop the hover timer if it's running
-                  }}
-                >
-                  <span className="uppercase">
-                    {menuTitle} ({openState ? "open" : "closed"})
-                  </span>
+            <Popover.Button ref={buttonRef}>
+              <div
+                className={classNames(
+                  open ? "text-blue-800" : "text-gray-800",
+                  "bg-white rounded-md",
+                  "border-2 border-black border-solid",
+                  "flex justify-center",
+                  LINK_STYLES
+                )}
+                onClick={() => handleClick(open)}
+              >
+                <span className="uppercase">
+                  {menuTitle} ({openState ? "open" : "closed"})
                   <ChevronDownIcon
                     className={classNames(
-                      open ? "text-gray-600 translate-y-1.5" : "text-gray-400",
-                      "ml-2 h-5 w-5 transform transition-all"
+                      open ? "text-gray-600 translate-y-6" : "text-gray-400",
+                      "h-9 w-9 inline-block",
+                      "transform transition-all duration-500"
                     )}
                     aria-hidden="true"
                   />
-                </div>
-              </Popover.Button>
-            </div>
+                </span>
+              </div>
+            </Popover.Button>
 
             <Transition
               show={open}
@@ -93,8 +118,14 @@ export default function FlyoutMenu({
               leaveFrom="opacity-100 translate-y-0"
               leaveTo="opacity-0 translate-y-1"
             >
-              <Popover.Panel static className="z-10 w-64 mx-auto">
-                <div className="relative grid space-y-[2px] bg-white border-2 border-gray-300 border-solid divide-y-2 rounded-md text-center">
+              <Popover.Panel static className="z-10 w-48 mx-auto">
+                <div
+                  className={classNames(
+                    "relative grid space-y-[2px]",
+                    "bg-white border-2 border-gray-300 border-solid",
+                    "divide-y-2 rounded-md text-center"
+                  )}
+                >
                   {linksArray.map(([title, href]) => (
                     <Fragment key={"PopoverPanel<>" + title + href}>
                       <a href={href} className={LINK_STYLES}>
@@ -108,6 +139,6 @@ export default function FlyoutMenu({
           </div>
         )}
       </Popover>
-    </>
+    </div>
   )
 }
